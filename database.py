@@ -24,7 +24,7 @@ def ensure_database() -> None:
 
 
 def init_db() -> None:
-    """Create the users and revoked_tokens tables if they do not exist."""
+    """Create the application tables if they do not exist."""
     ensure_database()
     conn = psycopg2.connect(DATABASE_URL)
     try:
@@ -44,6 +44,20 @@ def init_db() -> None:
                 CREATE TABLE IF NOT EXISTS revoked_tokens (
                     jti TEXT PRIMARY KEY,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS academic_profiles (
+                    user_id INTEGER PRIMARY KEY
+                        REFERENCES users(id) ON DELETE CASCADE,
+                    name TEXT,
+                    bio TEXT,
+                    academic_level TEXT,
+                    subjects TEXT[] NOT NULL DEFAULT '{}',
+                    interests TEXT[] NOT NULL DEFAULT '{}',
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
                 """
             )

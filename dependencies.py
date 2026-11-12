@@ -36,7 +36,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
                 if cur.fetchone() is not None:
                     raise credentials_exception()
             cur.execute(
-                "SELECT email, created_at FROM users WHERE email = %s",
+                "SELECT id, email, created_at FROM users WHERE email = %s",
                 (email,),
             )
             user = cur.fetchone()
