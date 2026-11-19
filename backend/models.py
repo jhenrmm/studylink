@@ -8,6 +8,29 @@ _MAX_LIST_ITEMS = 50
 _MAX_ITEM_LENGTH = 100
 
 
+def clean_terms(values: Optional[List[str]]) -> Optional[List[str]]:
+    """Trim, de-duplicate (case-insensitively) and drop empty list items."""
+    if values is None:
+        return None
+
+    cleaned: List[str] = []
+    seen = set()
+    for item in values:
+        item = item.strip()
+        if not item:
+            continue
+        if len(item) > _MAX_ITEM_LENGTH:
+            raise ValueError(
+                f"Cada matéria/interesse deve ter no máximo {_MAX_ITEM_LENGTH} caracteres"
+            )
+        key = item.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(item)
+    return cleaned
+
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
@@ -52,25 +75,7 @@ class AcademicProfileUpdate(BaseModel):
     @classmethod
     def clean_items(cls, value: Optional[List[str]]) -> Optional[List[str]]:
         """Trim, de-duplicate and drop empty subjects/interests."""
-        if value is None:
-            return None
-
-        cleaned: List[str] = []
-        seen = set()
-        for item in value:
-            item = item.strip()
-            if not item:
-                continue
-            if len(item) > _MAX_ITEM_LENGTH:
-                raise ValueError(
-                    f"Cada matéria/interesse deve ter no máximo {_MAX_ITEM_LENGTH} caracteres"
-                )
-            key = item.casefold()
-            if key in seen:
-                continue
-            seen.add(key)
-            cleaned.append(item)
-        return cleaned
+        return clean_terms(value)
 
 
 class AcademicProfileOut(BaseModel):
@@ -81,3 +86,19 @@ class AcademicProfileOut(BaseModel):
     subjects: List[str] = Field(default_factory=list)
     interests: List[str] = Field(default_factory=list)
     updated_at: datetime
+
+
+class StudentOut(BaseModel):
+    """Academic data of a student that can be seen by other students."""
+
+    id: int
+    email: str
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    academic_level: Optional[str] = None
+    subjects: List[str] = Field(default_factory=list)
+    interests: List[str] = Field(default_factory=list)
+    updated_at: Optional[datetime] = None
+    common_subjects: List[str] = Field(default_factory=list)
+    common_interests: List[str] = Field(default_factory=list)
+    match_count: int = 0

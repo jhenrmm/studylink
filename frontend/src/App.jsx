@@ -8,6 +8,8 @@ import Login from './pages/Login.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Profile from './pages/Profile.jsx';
 import Register from './pages/Register.jsx';
+import StudentProfile from './pages/StudentProfile.jsx';
+import Students from './pages/Students.jsx';
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="students" element={<Students />} />
+          <Route path="students/:studentId" element={<StudentProfile />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/edit" element={<EditProfile />} />
         </Route>

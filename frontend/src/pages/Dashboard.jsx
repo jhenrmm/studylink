@@ -108,7 +108,14 @@ export default function Dashboard() {
                 Mantenha suas matérias e interesses atualizados para mostrar o que você
                 está estudando no momento.
               </p>
-              <Link className="button button-primary" to="/profile/edit">Atualizar informações</Link>
+              <div className="panel-actions">
+                <Link className="button button-primary" to="/profile/edit">
+                  Atualizar informações
+                </Link>
+                <Link className="button button-outline" to="/students">
+                  Encontrar estudantes
+                </Link>
+              </div>
             </section>
           </div>
         </>

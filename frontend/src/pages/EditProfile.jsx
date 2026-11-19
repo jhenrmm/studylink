@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {
+  INTEREST_SUGGESTIONS,
+  LEVELS,
+  SUBJECT_SUGGESTIONS,
+} from '../academicOptions.js';
 import { profileApi } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import TagInput from '../components/TagInput.jsx';
@@ -11,11 +16,6 @@ const EMPTY_PROFILE = {
   subjects: [],
   interests: [],
 };
-
-const LEVELS = ['Ensino Fundamental', 'Ensino Médio', 'Graduação', 'Pós-graduação'];
-
-const SUBJECT_SUGGESTIONS = ['Matemática', 'Português', 'Física', 'Química', 'Programação'];
-const INTEREST_SUGGESTIONS = ['Estudos em grupo', 'Pesquisa', 'Concursos', 'Projetos', 'Leitura'];
 
 function isMissingProfile(error) {
   return /not found|não encontrado/i.test(error.message);
