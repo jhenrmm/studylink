@@ -88,6 +88,41 @@ class AcademicProfileOut(BaseModel):
     updated_at: datetime
 
 
+class GroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=1000)
+    subject: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Matéria ou assunto do grupo (ex.: Matemática, Programação)",
+    )
+
+    @field_validator("name", "description", "subject")
+    @classmethod
+    def strip_required_text(cls, value: str) -> str:
+        """Trim text fields and reject values that are blank after trimming."""
+        value = value.strip()
+        if not value:
+            raise ValueError("Informe nome, descrição e matéria do grupo")
+        return value
+
+
+class GroupOut(BaseModel):
+    """Study group data that can be seen by other students."""
+
+    id: int
+    name: str
+    description: str
+    subject: str
+    creator_id: int
+    creator_name: Optional[str] = None
+    creator_email: str
+    member_count: int = 0
+    is_member: bool = False
+    is_admin: bool = False
+    created_at: datetime
+
+
 class StudentOut(BaseModel):
     """Academic data of a student that can be seen by other students."""
 

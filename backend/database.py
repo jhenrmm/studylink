@@ -38,6 +38,29 @@ _SCHEMA_STATEMENTS = (
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS study_groups (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        creator_id INTEGER NOT NULL
+            REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS group_members (
+        group_id INTEGER NOT NULL
+            REFERENCES study_groups(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL
+            REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member'
+            CHECK (role IN ('admin', 'member')),
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (group_id, user_id)
+    )
+    """,
 )
 
 

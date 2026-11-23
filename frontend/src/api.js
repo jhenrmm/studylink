@@ -3,9 +3,14 @@ const DEMO_EMAIL = 'demo@studylink.com';
 const DEMO_PASSWORD = '123456';
 
 let nextUserId = 1;
+let nextGroupId = 1;
 
 function makeUser(email, password, createdAt = new Date().toISOString()) {
   return { id: nextUserId++, email, password, createdAt };
+}
+
+function makeGroup({ name, description, subject, creatorEmail, createdAt, members }) {
+  return { id: nextGroupId++, name, description, subject, creatorEmail, createdAt, members };
 }
 
 const state = {
@@ -74,6 +79,42 @@ const state = {
       },
     ],
   ]),
+  groups: [
+    makeGroup({
+      name: 'Matemática para o ENEM',
+      description:
+        'Grupo para resolver exercícios de matemática do ENEM toda semana. Compartilhamos listas, dicas e correções em conjunto.',
+      subject: 'Matemática',
+      creatorEmail: 'bruno@studylink.com',
+      createdAt: '2026-05-09T14:00:00.000Z',
+      members: [
+        { email: 'bruno@studylink.com', role: 'admin', joinedAt: '2026-05-09T14:00:00.000Z' },
+        { email: DEMO_EMAIL, role: 'member', joinedAt: '2026-05-10T09:00:00.000Z' },
+      ],
+    }),
+    makeGroup({
+      name: 'Programação em Python',
+      description:
+        'Encontros para praticar lógica de programação e construir pequenos projetos em Python. Iniciantes são bem-vindos!',
+      subject: 'Programação',
+      creatorEmail: 'carla@studylink.com',
+      createdAt: '2026-05-13T10:30:00.000Z',
+      members: [
+        { email: 'carla@studylink.com', role: 'admin', joinedAt: '2026-05-13T10:30:00.000Z' },
+      ],
+    }),
+    makeGroup({
+      name: 'Estatística aplicada',
+      description:
+        'Leitura de artigos e discussão de exercícios de estatística com foco em ciência de dados.',
+      subject: 'Estatística',
+      creatorEmail: 'elisa@studylink.com',
+      createdAt: '2026-05-11T16:45:00.000Z',
+      members: [
+        { email: 'elisa@studylink.com', role: 'admin', joinedAt: '2026-05-11T16:45:00.000Z' },
+      ],
+    }),
+  ],
   tokens: new Map(),
 };
 
@@ -122,6 +163,26 @@ function buildStudent(user, profile, subjectKeys = [], interestKeys = []) {
     common_subjects: commonSubjects,
     common_interests: commonInterests,
     match_count: commonSubjects.length + commonInterests.length,
+  };
+}
+
+function buildGroup(group, currentEmail) {
+  const creator = state.users.get(group.creatorEmail);
+  const profile = state.profiles.get(group.creatorEmail);
+  const membership = group.members.find((member) => member.email === currentEmail);
+
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    subject: group.subject,
+    creator_id: creator?.id ?? null,
+    creator_name: profile?.name || null,
+    creator_email: group.creatorEmail,
+    member_count: group.members.length,
+    is_member: Boolean(membership),
+    is_admin: membership?.role === 'admin',
+    created_at: group.createdAt,
   };
 }
 
@@ -236,5 +297,66 @@ export const studentsApi = {
     if (!user) throw new Error('Student not found');
 
     return buildStudent(user, state.profiles.get(user.email));
+  },
+};
+
+// Espelha POST /groups, GET /groups e GET /groups/{id} do backend FastAPI.
+export const groupsApi = {
+  async create({ name, description, subject }, token) {
+    const user = getUserFromToken(token);
+
+    const cleaned = {
+      name: String(name || '').trim(),
+      description: String(description || '').trim(),
+      subject: String(subject || '').trim(),
+    };
+
+    if (!cleaned.name || !cleaned.description || !cleaned.subject) {
+      throw new Error('Informe nome, descrição e matéria do grupo.');
+    }
+    if (cleaned.name.length > 120) {
+      throw new Error('O nome do grupo deve ter no máximo 120 caracteres.');
+    }
+    if (cleaned.description.length > 1000) {
+      throw new Error('A descrição do grupo deve ter no máximo 1000 caracteres.');
+    }
+    if (cleaned.subject.length > 100) {
+      throw new Error('A matéria do grupo deve ter no máximo 100 caracteres.');
+    }
+
+    const now = new Date().toISOString();
+    const group = makeGroup({
+      ...cleaned,
+      creatorEmail: user.email,
+      createdAt: now,
+      members: [{ email: user.email, role: 'admin', joinedAt: now }],
+    });
+
+    state.groups.push(group);
+    return buildGroup(group, user.email);
+  },
+
+  async list({ subject = '' } = {}, token) {
+    const currentUser = getUserFromToken(token);
+    const subjectKey = normalizeKey(subject);
+
+    const groups = state.groups
+      .filter((group) => !subjectKey || normalizeKey(group.subject) === subjectKey)
+      .sort((a, b) => {
+        const diff = Date.parse(b.createdAt) - Date.parse(a.createdAt);
+        return diff !== 0 ? diff : b.id - a.id;
+      });
+
+    return groups.map((group) => buildGroup(group, currentUser.email));
+  },
+
+  async get(groupId, token) {
+    const currentUser = getUserFromToken(token);
+
+    const group = state.groups.find((item) => String(item.id) === String(groupId));
+
+    if (!group) throw new Error('Group not found');
+
+    return buildGroup(group, currentUser.email);
   },
 };

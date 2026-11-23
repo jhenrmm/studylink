@@ -115,6 +115,9 @@ export default function Dashboard() {
                 <Link className="button button-outline" to="/students">
                   Encontrar estudantes
                 </Link>
+                <Link className="button button-outline" to="/groups">
+                  Grupos de estudo
+                </Link>
               </div>
             </section>
           </div>

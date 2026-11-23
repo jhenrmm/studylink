@@ -20,6 +20,7 @@ export default function Layout() {
               <>
                 <NavLink to="/dashboard">Painel</NavLink>
                 <NavLink to="/students">Estudantes</NavLink>
+                <NavLink to="/groups">Grupos</NavLink>
                 <NavLink to="/profile">Perfil</NavLink>
                 <button type="button" className="nav-logout" onClick={logout}>
                   Sair{displayName ? `, ${displayName}` : ''}
