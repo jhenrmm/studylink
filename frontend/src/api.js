@@ -4,14 +4,102 @@ const DEMO_PASSWORD = '123456';
 
 let nextUserId = 1;
 let nextGroupId = 1;
+let nextRequestId = 1;
 
 function makeUser(email, password, createdAt = new Date().toISOString()) {
   return { id: nextUserId++, email, password, createdAt };
 }
 
-function makeGroup({ name, description, subject, creatorEmail, createdAt, members }) {
-  return { id: nextGroupId++, name, description, subject, creatorEmail, createdAt, members };
+function makeGroup({
+  name,
+  description,
+  subject,
+  creatorEmail,
+  createdAt,
+  members,
+  joinPolicy = 'open',
+}) {
+  return {
+    id: nextGroupId++,
+    name,
+    description,
+    subject,
+    joinPolicy,
+    creatorEmail,
+    createdAt,
+    members,
+  };
 }
+
+function makeJoinRequest({
+  groupId,
+  email,
+  status = 'pending',
+  createdAt,
+  decidedAt = null,
+  decidedBy = null,
+}) {
+  return {
+    id: nextRequestId++,
+    groupId,
+    email,
+    status,
+    createdAt,
+    decidedAt,
+    decidedBy,
+  };
+}
+
+// O quarto grupo permite demonstrar também o fluxo de aprovação de solicitações.
+const seedGroups = [
+  makeGroup({
+    name: 'Matemática para o ENEM',
+    description:
+      'Grupo para resolver exercícios de matemática do ENEM toda semana. Compartilhamos listas, dicas e correções em conjunto.',
+    subject: 'Matemática',
+    creatorEmail: 'bruno@studylink.com',
+    createdAt: '2026-05-09T14:00:00.000Z',
+    members: [
+      { email: 'bruno@studylink.com', role: 'admin', joinedAt: '2026-05-09T14:00:00.000Z' },
+      { email: DEMO_EMAIL, role: 'member', joinedAt: '2026-05-10T09:00:00.000Z' },
+    ],
+  }),
+  makeGroup({
+    name: 'Programação em Python',
+    description:
+      'Encontros para praticar lógica de programação e construir pequenos projetos em Python. Iniciantes são bem-vindos!',
+    subject: 'Programação',
+    creatorEmail: 'carla@studylink.com',
+    createdAt: '2026-05-13T10:30:00.000Z',
+    joinPolicy: 'approval',
+    members: [
+      { email: 'carla@studylink.com', role: 'admin', joinedAt: '2026-05-13T10:30:00.000Z' },
+    ],
+  }),
+  makeGroup({
+    name: 'Estatística aplicada',
+    description:
+      'Leitura de artigos e discussão de exercícios de estatística com foco em ciência de dados.',
+    subject: 'Estatística',
+    creatorEmail: 'elisa@studylink.com',
+    createdAt: '2026-05-11T16:45:00.000Z',
+    members: [
+      { email: 'elisa@studylink.com', role: 'admin', joinedAt: '2026-05-11T16:45:00.000Z' },
+    ],
+  }),
+  makeGroup({
+    name: 'Algoritmos e estruturas de dados',
+    description:
+      'Estudo semanal de algoritmos, complexidade e estruturas de dados com exercícios e discussão em grupo.',
+    subject: 'Programação',
+    creatorEmail: DEMO_EMAIL,
+    createdAt: '2026-05-15T09:00:00.000Z',
+    joinPolicy: 'approval',
+    members: [
+      { email: DEMO_EMAIL, role: 'admin', joinedAt: '2026-05-15T09:00:00.000Z' },
+    ],
+  }),
+];
 
 const state = {
   users: new Map([
@@ -79,40 +167,12 @@ const state = {
       },
     ],
   ]),
-  groups: [
-    makeGroup({
-      name: 'Matemática para o ENEM',
-      description:
-        'Grupo para resolver exercícios de matemática do ENEM toda semana. Compartilhamos listas, dicas e correções em conjunto.',
-      subject: 'Matemática',
-      creatorEmail: 'bruno@studylink.com',
-      createdAt: '2026-05-09T14:00:00.000Z',
-      members: [
-        { email: 'bruno@studylink.com', role: 'admin', joinedAt: '2026-05-09T14:00:00.000Z' },
-        { email: DEMO_EMAIL, role: 'member', joinedAt: '2026-05-10T09:00:00.000Z' },
-      ],
-    }),
-    makeGroup({
-      name: 'Programação em Python',
-      description:
-        'Encontros para praticar lógica de programação e construir pequenos projetos em Python. Iniciantes são bem-vindos!',
-      subject: 'Programação',
-      creatorEmail: 'carla@studylink.com',
-      createdAt: '2026-05-13T10:30:00.000Z',
-      members: [
-        { email: 'carla@studylink.com', role: 'admin', joinedAt: '2026-05-13T10:30:00.000Z' },
-      ],
-    }),
-    makeGroup({
-      name: 'Estatística aplicada',
-      description:
-        'Leitura de artigos e discussão de exercícios de estatística com foco em ciência de dados.',
-      subject: 'Estatística',
-      creatorEmail: 'elisa@studylink.com',
-      createdAt: '2026-05-11T16:45:00.000Z',
-      members: [
-        { email: 'elisa@studylink.com', role: 'admin', joinedAt: '2026-05-11T16:45:00.000Z' },
-      ],
+  groups: seedGroups,
+  joinRequests: [
+    makeJoinRequest({
+      groupId: seedGroups[3].id,
+      email: 'bruno@studylink.com',
+      createdAt: '2026-05-16T13:20:00.000Z',
     }),
   ],
   tokens: new Map(),
@@ -182,8 +242,86 @@ function buildGroup(group, currentEmail) {
     member_count: group.members.length,
     is_member: Boolean(membership),
     is_admin: membership?.role === 'admin',
+    join_policy: group.joinPolicy || 'open',
+    has_pending_request: state.joinRequests.some(
+      (request) =>
+        request.groupId === group.id &&
+        request.email === currentEmail &&
+        request.status === 'pending',
+    ),
     created_at: group.createdAt,
   };
+}
+
+function findGroup(groupId) {
+  const group = state.groups.find((item) => String(item.id) === String(groupId));
+  if (!group) throw new Error('Group not found');
+  return group;
+}
+
+function getMembership(group, email) {
+  return group.members.find((member) => member.email === email);
+}
+
+function requireAdmin(group, email) {
+  if (getMembership(group, email)?.role !== 'admin') {
+    throw new Error('Apenas administradores podem gerenciar solicitações.');
+  }
+}
+
+function buildMember(member) {
+  const user = state.users.get(member.email);
+  const profile = state.profiles.get(member.email);
+
+  return {
+    id: user?.id ?? null,
+    email: member.email,
+    name: profile?.name || null,
+    role: member.role,
+    joined_at: member.joinedAt,
+  };
+}
+
+function buildJoinRequest(request) {
+  const user = state.users.get(request.email);
+  const profile = state.profiles.get(request.email);
+  const decider = state.users.get(request.decidedBy);
+
+  return {
+    id: request.id,
+    group_id: request.groupId,
+    user_id: user?.id ?? null,
+    email: request.email,
+    name: profile?.name || null,
+    status: request.status,
+    created_at: request.createdAt,
+    decided_at: request.decidedAt,
+    decided_by: decider?.id ?? null,
+  };
+}
+
+function decideJoinRequest(groupId, requestId, email, decision) {
+  const group = findGroup(groupId);
+  requireAdmin(group, email);
+
+  const request = state.joinRequests.find(
+    (item) => item.id === Number(requestId) && item.groupId === group.id,
+  );
+  if (!request) throw new Error('Solicitação não encontrada.');
+  if (request.status !== 'pending') throw new Error('Esta solicitação já foi decidida.');
+
+  if (decision === 'approved' && !getMembership(group, request.email)) {
+    group.members.push({
+      email: request.email,
+      role: 'member',
+      joinedAt: new Date().toISOString(),
+    });
+  }
+  request.status = decision;
+  request.decidedAt = new Date().toISOString();
+  request.decidedBy = email;
+
+  return buildGroup(group, email);
 }
 
 export const authApi = {
@@ -300,9 +438,9 @@ export const studentsApi = {
   },
 };
 
-// Espelha POST /groups, GET /groups e GET /groups/{id} do backend FastAPI.
+// Espelha as rotas de grupos do backend FastAPI, incluindo entrada em grupos.
 export const groupsApi = {
-  async create({ name, description, subject }, token) {
+  async create({ name, description, subject, joinPolicy = 'open' }, token) {
     const user = getUserFromToken(token);
 
     const cleaned = {
@@ -327,6 +465,7 @@ export const groupsApi = {
     const now = new Date().toISOString();
     const group = makeGroup({
       ...cleaned,
+      joinPolicy: joinPolicy === 'approval' ? 'approval' : 'open',
       creatorEmail: user.email,
       createdAt: now,
       members: [{ email: user.email, role: 'admin', joinedAt: now }],
@@ -350,13 +489,109 @@ export const groupsApi = {
     return groups.map((group) => buildGroup(group, currentUser.email));
   },
 
+  async mine({ subject = '' } = {}, token) {
+    const currentUser = getUserFromToken(token);
+    const subjectKey = normalizeKey(subject);
+
+    const groups = state.groups
+      .filter((group) => getMembership(group, currentUser.email))
+      .filter((group) => !subjectKey || normalizeKey(group.subject) === subjectKey)
+      .sort((a, b) => {
+        const diff = Date.parse(b.createdAt) - Date.parse(a.createdAt);
+        return diff !== 0 ? diff : b.id - a.id;
+      });
+
+    return groups.map((group) => buildGroup(group, currentUser.email));
+  },
+
   async get(groupId, token) {
     const currentUser = getUserFromToken(token);
+    return buildGroup(findGroup(groupId), currentUser.email);
+  },
 
-    const group = state.groups.find((item) => String(item.id) === String(groupId));
+  async members(groupId, token) {
+    getUserFromToken(token);
+    const group = findGroup(groupId);
 
-    if (!group) throw new Error('Group not found');
+    return [...group.members]
+      .sort((a, b) => {
+        if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
+        const diff = Date.parse(a.joinedAt) - Date.parse(b.joinedAt);
+        return diff !== 0 ? diff : a.email.localeCompare(b.email);
+      })
+      .map(buildMember);
+  },
 
-    return buildGroup(group, currentUser.email);
+  async join(groupId, token) {
+    const user = getUserFromToken(token);
+    const group = findGroup(groupId);
+
+    if (getMembership(group, user.email)) {
+      throw new Error('Você já participa deste grupo.');
+    }
+    if (group.joinPolicy !== 'open') {
+      throw new Error('Este grupo exige aprovação. Solicite participação.');
+    }
+
+    group.members.push({
+      email: user.email,
+      role: 'member',
+      joinedAt: new Date().toISOString(),
+    });
+    return buildGroup(group, user.email);
+  },
+
+  async request(groupId, token) {
+    const user = getUserFromToken(token);
+    const group = findGroup(groupId);
+
+    if (getMembership(group, user.email)) {
+      throw new Error('Você já participa deste grupo.');
+    }
+    if (group.joinPolicy !== 'approval') {
+      throw new Error('Este grupo permite entrada direta.');
+    }
+    const alreadyRequested = state.joinRequests.some(
+      (request) =>
+        request.groupId === group.id &&
+        request.email === user.email &&
+        request.status === 'pending',
+    );
+    if (alreadyRequested) {
+      throw new Error('Você já enviou uma solicitação para este grupo.');
+    }
+
+    const request = makeJoinRequest({
+      groupId: group.id,
+      email: user.email,
+      createdAt: new Date().toISOString(),
+    });
+    state.joinRequests.push(request);
+    return buildJoinRequest(request);
+  },
+
+  async requests(groupId, token) {
+    const user = getUserFromToken(token);
+    const group = findGroup(groupId);
+    requireAdmin(group, user.email);
+
+    return state.joinRequests
+      .filter((request) => request.groupId === group.id)
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'pending' ? -1 : 1;
+        const diff = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+        return diff !== 0 ? diff : a.id - b.id;
+      })
+      .map(buildJoinRequest);
+  },
+
+  async approve(groupId, requestId, token) {
+    const user = getUserFromToken(token);
+    return decideJoinRequest(groupId, requestId, user.email, 'approved');
+  },
+
+  async reject(groupId, requestId, token) {
+    const user = getUserFromToken(token);
+    return decideJoinRequest(groupId, requestId, user.email, 'rejected');
   },
 };

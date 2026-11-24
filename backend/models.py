@@ -96,6 +96,10 @@ class GroupCreate(BaseModel):
         max_length=100,
         description="Matéria ou assunto do grupo (ex.: Matemática, Programação)",
     )
+    join_policy: str = Field(
+        default="open",
+        description="Forma de entrada: 'open' (entrada direta) ou 'approval' (pede aprovação)",
+    )
 
     @field_validator("name", "description", "subject")
     @classmethod
@@ -105,6 +109,15 @@ class GroupCreate(BaseModel):
         if not value:
             raise ValueError("Informe nome, descrição e matéria do grupo")
         return value
+
+    @field_validator("join_policy")
+    @classmethod
+    def normalize_join_policy(cls, value: str) -> str:
+        """Normalize the join policy to one of the supported values."""
+        policy = value.strip().lower()
+        if policy not in {"open", "approval"}:
+            raise ValueError("A forma de entrada deve ser 'open' ou 'approval'")
+        return policy
 
 
 class GroupOut(BaseModel):
@@ -120,7 +133,33 @@ class GroupOut(BaseModel):
     member_count: int = 0
     is_member: bool = False
     is_admin: bool = False
+    join_policy: str = "open"
+    has_pending_request: bool = False
     created_at: datetime
+
+
+class GroupMemberOut(BaseModel):
+    """A student registered as a member of a study group."""
+
+    id: int
+    email: str
+    name: Optional[str] = None
+    role: str
+    joined_at: datetime
+
+
+class JoinRequestOut(BaseModel):
+    """A student's request to join a group that requires approval."""
+
+    id: int
+    group_id: int
+    user_id: int
+    email: str
+    name: Optional[str] = None
+    status: str
+    created_at: datetime
+    decided_at: Optional[datetime] = None
+    decided_by: Optional[int] = None
 
 
 class StudentOut(BaseModel):

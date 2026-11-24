@@ -46,6 +46,8 @@ _SCHEMA_STATEMENTS = (
         subject TEXT NOT NULL,
         creator_id INTEGER NOT NULL
             REFERENCES users(id) ON DELETE CASCADE,
+        join_policy TEXT NOT NULL DEFAULT 'open'
+            CHECK (join_policy IN ('open', 'approval')),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
@@ -60,6 +62,29 @@ _SCHEMA_STATEMENTS = (
         joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (group_id, user_id)
     )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS group_join_requests (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL
+            REFERENCES study_groups(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL
+            REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'pending'
+            CHECK (status IN ('pending', 'approved', 'rejected')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        decided_at TIMESTAMPTZ,
+        decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS group_join_requests_one_pending
+        ON group_join_requests (group_id, user_id) WHERE status = 'pending'
+    """,
+    # Idempotent upgrade for databases created before the join policy existed.
+    """
+    ALTER TABLE study_groups ADD COLUMN IF NOT EXISTS join_policy TEXT NOT NULL
+        DEFAULT 'open' CHECK (join_policy IN ('open', 'approval'))
     """,
 )
 

@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import CreateGroup from './pages/CreateGroup.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import EditProfile from './pages/EditProfile.jsx';
+import GroupDetail from './pages/GroupDetail.jsx';
 import Groups from './pages/Groups.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="students/:studentId" element={<StudentProfile />} />
           <Route path="groups" element={<Groups />} />
           <Route path="groups/new" element={<CreateGroup />} />
+          <Route path="groups/:groupId" element={<GroupDetail />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/edit" element={<EditProfile />} />
         </Route>

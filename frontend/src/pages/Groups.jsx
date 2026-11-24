@@ -25,9 +25,10 @@ function formatDate(value) {
   });
 }
 
-function GroupCard({ group }) {
+function GroupCard({ group, busy, onJoin, onRequest }) {
   const created = formatDate(group.created_at);
   const creator = group.creator_name || group.creator_email;
+  const requiresApproval = group.join_policy === 'approval';
 
   return (
     <article className="group-card">
@@ -38,10 +39,18 @@ function GroupCard({ group }) {
 
         <div className="group-identity">
           <h2>{group.name}</h2>
-          <span className="tag">{group.subject}</span>
+          <div className="tag-list">
+            <span className="tag">{group.subject}</span>
+            <span className="tag tag-accent">
+              {requiresApproval ? 'Com aprovação' : 'Entrada livre'}
+            </span>
+          </div>
         </div>
 
-        {group.is_admin && <span className="match-badge">Você é admin</span>}
+        {group.is_member && <span className="match-badge">Você participa</span>}
+        {!group.is_member && group.has_pending_request && (
+          <span className="status-badge status-badge-pending">Solicitação enviada</span>
+        )}
       </div>
 
       <p className="group-description">{group.description}</p>
@@ -55,6 +64,33 @@ function GroupCard({ group }) {
           {group.member_count} {group.member_count === 1 ? 'membro' : 'membros'}
         </span>
       </div>
+
+      <div className="group-card-actions">
+        <Link className="button button-outline button-small" to={`/groups/${group.id}`}>
+          Ver detalhes
+        </Link>
+        {!group.is_member && !group.has_pending_request && (
+          requiresApproval ? (
+            <button
+              type="button"
+              className="button button-primary button-small"
+              disabled={busy}
+              onClick={() => onRequest(group)}
+            >
+              {busy ? 'Enviando...' : 'Solicitar participação'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="button button-primary button-small"
+              disabled={busy}
+              onClick={() => onJoin(group)}
+            >
+              {busy ? 'Entrando...' : 'Entrar no grupo'}
+            </button>
+          )
+        )}
+      </div>
     </article>
   );
 }
@@ -62,19 +98,29 @@ function GroupCard({ group }) {
 export default function Groups() {
   const { token } = useAuth();
   const location = useLocation();
+  const [view, setView] = useState('all');
   const [subjectForm, setSubjectForm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [busyGroupId, setBusyGroupId] = useState(null);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError('');
+    setNotice('');
+    setActionError('');
 
-    groupsApi
-      .list({ subject: subjectFilter }, token)
+    const request =
+      view === 'mine'
+        ? groupsApi.mine({ subject: subjectFilter }, token)
+        : groupsApi.list({ subject: subjectFilter }, token);
+
+    request
       .then((data) => {
         if (active) setGroups(data);
       })
@@ -88,7 +134,7 @@ export default function Groups() {
     return () => {
       active = false;
     };
-  }, [subjectFilter, token]);
+  }, [subjectFilter, token, view]);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -100,17 +146,70 @@ export default function Groups() {
     setSubjectFilter('');
   }
 
+  async function handleAction(group, action) {
+    setBusyGroupId(group.id);
+    setNotice('');
+    setActionError('');
+
+    try {
+      if (action === 'join') {
+        const updated = await groupsApi.join(group.id, token);
+        setGroups((current) =>
+          current.map((item) => (item.id === group.id ? updated : item)),
+        );
+        setNotice('Você entrou no grupo com sucesso!');
+      } else {
+        await groupsApi.request(group.id, token);
+        setGroups((current) =>
+          current.map((item) =>
+            item.id === group.id ? { ...item, has_pending_request: true } : item,
+          ),
+        );
+        setNotice('Solicitação enviada. Aguarde a aprovação do administrador.');
+      }
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setBusyGroupId(null);
+    }
+  }
+
   return (
     <div className="container page">
       <div className="page-heading">
         <div>
           <span className="eyebrow">Grupos de estudo</span>
-          <h1>Grupos de estudo</h1>
-          <p>Reúna pessoas interessadas em aprender o mesmo conteúdo.</p>
+          <h1>{view === 'mine' ? 'Meus grupos' : 'Grupos de estudo'}</h1>
+          <p>
+            {view === 'mine'
+              ? 'Acompanhe os grupos dos quais você participa.'
+              : 'Reúna pessoas interessadas em aprender o mesmo conteúdo.'}
+          </p>
         </div>
         <Link className="button button-primary" to="/groups/new">
           Criar grupo
         </Link>
+      </div>
+
+      <div className="view-switcher" role="tablist" aria-label="Visualização de grupos">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'all'}
+          className={`view-tab${view === 'all' ? ' active' : ''}`}
+          onClick={() => setView('all')}
+        >
+          Todos os grupos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'mine'}
+          className={`view-tab${view === 'mine' ? ' active' : ''}`}
+          onClick={() => setView('mine')}
+        >
+          Meus grupos
+        </button>
       </div>
 
       {location.state?.created && (
@@ -148,6 +247,8 @@ export default function Groups() {
       </form>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
+      {actionError && <div className="alert alert-error" role="alert">{actionError}</div>}
+      {notice && <div className="alert alert-success" role="status">{notice}</div>}
 
       {loading ? (
         <div className="state-card">
@@ -159,8 +260,12 @@ export default function Groups() {
           <div className="results-bar">
             <p role="status">
               {groups.length === 0
-                ? 'Nenhum grupo encontrado.'
-                : `${groups.length} ${groups.length === 1 ? 'grupo encontrado' : 'grupos encontrados'}`}
+                ? view === 'mine'
+                  ? 'Você ainda não participa de nenhum grupo.'
+                  : 'Nenhum grupo encontrado.'
+                : view === 'mine'
+                  ? `Você participa de ${groups.length} ${groups.length === 1 ? 'grupo' : 'grupos'}.`
+                  : `${groups.length} ${groups.length === 1 ? 'grupo encontrado' : 'grupos encontrados'}`}
             </p>
           </div>
 
@@ -168,14 +273,24 @@ export default function Groups() {
             <div className="state-card">
               <span className="state-icon" aria-hidden="true">👥</span>
               <h2>
-                {subjectFilter ? 'Nenhum grupo encontrado' : 'Nenhum grupo criado ainda'}
+                {view === 'mine'
+                  ? 'Nenhum grupo participado'
+                  : subjectFilter
+                    ? 'Nenhum grupo encontrado'
+                    : 'Nenhum grupo criado ainda'}
               </h2>
               <p>
-                {subjectFilter
-                  ? 'Tente buscar por outra matéria ou crie o primeiro grupo sobre esse assunto.'
-                  : 'Crie o primeiro grupo de estudo e convide outros estudantes.'}
+                {view === 'mine'
+                  ? 'Explore os grupos disponíveis e entre em um para começar a estudar junto.'
+                  : subjectFilter
+                    ? 'Tente buscar por outra matéria ou crie o primeiro grupo sobre esse assunto.'
+                    : 'Crie o primeiro grupo de estudo e convide outros estudantes.'}
               </p>
-              {subjectFilter ? (
+              {view === 'mine' ? (
+                <button type="button" className="button button-primary" onClick={() => setView('all')}>
+                  Ver grupos disponíveis
+                </button>
+              ) : subjectFilter ? (
                 <button type="button" className="button button-outline" onClick={clearFilter}>
                   Limpar filtro
                 </button>
@@ -186,7 +301,13 @@ export default function Groups() {
           ) : (
             <div className="groups-grid">
               {groups.map((group) => (
-                <GroupCard group={group} key={group.id} />
+                <GroupCard
+                  group={group}
+                  key={group.id}
+                  busy={busyGroupId === group.id}
+                  onJoin={(item) => handleAction(item, 'join')}
+                  onRequest={(item) => handleAction(item, 'request')}
+                />
               ))}
             </div>
           )}

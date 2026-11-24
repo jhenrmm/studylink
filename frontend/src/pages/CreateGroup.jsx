@@ -8,6 +8,7 @@ const EMPTY_GROUP = {
   name: '',
   description: '',
   subject: '',
+  joinPolicy: 'open',
 };
 
 export default function CreateGroup() {
@@ -29,6 +30,7 @@ export default function CreateGroup() {
       name: form.name.trim(),
       description: form.description.trim(),
       subject: form.subject.trim(),
+      joinPolicy: form.joinPolicy,
     };
 
     if (!payload.name || !payload.description || !payload.subject) {
@@ -100,6 +102,22 @@ export default function CreateGroup() {
             </datalist>
             <small className="field-hint">
               Escolha uma sugestão ou escreva o assunto do grupo.
+            </small>
+          </div>
+
+          <div className="field">
+            <label htmlFor="group-join-policy">Forma de entrada</label>
+            <select
+              id="group-join-policy"
+              name="joinPolicy"
+              value={form.joinPolicy}
+              onChange={updateField}
+            >
+              <option value="open">Entrada livre — qualquer estudante entra direto</option>
+              <option value="approval">Com aprovação — estudantes solicitam participação</option>
+            </select>
+            <small className="field-hint">
+              Defina como os estudantes poderão entrar no seu grupo.
             </small>
           </div>
 
