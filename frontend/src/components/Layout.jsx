@@ -15,7 +15,6 @@ export default function Layout() {
           </Link>
 
           <nav className="main-nav" aria-label="Navegação principal">
-            <NavLink to="/">Início</NavLink>
             {token ? (
               <>
                 <NavLink to="/dashboard">Painel</NavLink>
@@ -28,6 +27,7 @@ export default function Layout() {
               </>
             ) : (
               <>
+                <NavLink to="/">Início</NavLink>
                 <NavLink to="/login">Entrar</NavLink>
                 <Link className="button button-small button-primary" to="/register">
                   Criar conta
