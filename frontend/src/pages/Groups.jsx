@@ -27,7 +27,7 @@ function formatDate(value) {
 
 function GroupCard({ group, busy, onJoin, onRequest }) {
   const created = formatDate(group.created_at);
-  const creator = group.creator_name || group.creator_email;
+  const creator = group.creator_name;
   const requiresApproval = group.join_policy === 'approval';
 
   return (
@@ -57,7 +57,7 @@ function GroupCard({ group, busy, onJoin, onRequest }) {
 
       <div className="group-card-footer">
         <span className="muted">
-          Criado por {creator}
+          {creator ? `Criado por ${creator}` : 'Criado por um estudante'}
           {created ? ` em ${created}` : ''}
         </span>
         <span className="group-members">

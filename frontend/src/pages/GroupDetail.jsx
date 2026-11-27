@@ -3,8 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { groupsApi } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 
-function getInitials(name, email) {
-  const source = (name || email || 'SL').trim();
+function getInitials(name) {
+  const source = (name || 'SL').trim();
   const parts = source.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
@@ -164,7 +164,7 @@ export default function GroupDetail() {
               <div>
                 <h2>{group.name}</h2>
                 <p>
-                  Criado por {group.creator_name || group.creator_email}
+                  Criado por {group.creator_name || 'um estudante'}
                   {created ? ` em ${created}` : ''}
                 </p>
               </div>
@@ -189,13 +189,12 @@ export default function GroupDetail() {
               <h3>Integrantes</h3>
               <ul className="member-list">
                 {members.map((member) => (
-                  <li className="member-item" key={member.email}>
+                  <li className="member-item" key={member.id}>
                     <span className="member-avatar" aria-hidden="true">
-                      {getInitials(member.name, member.email)}
+                      {getInitials(member.name)}
                     </span>
                     <span className="member-identity">
                       <strong>{member.name || 'Estudante sem nome'}</strong>
-                      <small>{member.email}</small>
                     </span>
                     {member.role === 'admin' && <span className="tag">Admin</span>}
                     <span className="muted member-date">{formatDate(member.joined_at)}</span>
@@ -256,11 +255,10 @@ export default function GroupDetail() {
                   <ul className="request-list">
                     {pendingRequests.map((request) => (
                       <li className="request-item" key={request.id}>
-                        <strong>{request.name || 'Estudante sem nome'}</strong>
-                        <small>
-                          {request.email}
-                          {formatDate(request.created_at) ? ` · ${formatDate(request.created_at)}` : ''}
-                        </small>
+                        <strong>{request.name || `Estudante #${request.user_id}`}</strong>
+                        {formatDate(request.created_at) && (
+                          <small>Solicitado em {formatDate(request.created_at)}</small>
+                        )}
                         <div className="request-actions">
                           <button
                             type="button"

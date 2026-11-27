@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   INTEREST_SUGGESTIONS,
@@ -13,8 +13,8 @@ function emptyFilters() {
   return { subjects: [], interests: [], academic_level: '' };
 }
 
-function getInitials(name, email) {
-  const source = (name || email || 'SL').trim();
+function getInitials(name) {
+  const source = (name || 'SL').trim();
   const parts = source.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
@@ -68,14 +68,11 @@ function StudentCard({ student }) {
     <article className="student-card">
       <div className="student-card-header">
         <div className="student-avatar" aria-hidden="true">
-          {getInitials(student.name, student.email)}
+          {getInitials(student.name)}
         </div>
 
         <div className="student-identity">
           <h2>{student.name || 'Estudante sem nome'}</h2>
-          <a className="student-email" href={`mailto:${student.email}`}>
-            {student.email}
-          </a>
           {student.academic_level && (
             <span className="level-badge level-badge-sm">{student.academic_level}</span>
           )}
@@ -114,35 +111,51 @@ function StudentCard({ student }) {
   );
 }
 
+function StudentRow({ student }) {
+  const subjects = student.subjects?.slice(0, 3).join(' · ');
+
+  return (
+    <li className="student-row">
+      <span className="student-avatar" aria-hidden="true">
+        {getInitials(student.name)}
+      </span>
+
+      <div className="student-row-identity">
+        <strong>{student.name || 'Estudante sem nome'}</strong>
+        {(student.academic_level || subjects || student.match_count > 0) && (
+          <div className="student-row-meta">
+            {student.academic_level && (
+              <span className="level-badge level-badge-sm">{student.academic_level}</span>
+            )}
+            {student.match_count > 0 && (
+              <span className="match-badge">{student.match_count} em comum</span>
+            )}
+            {subjects && <span>{subjects}</span>}
+          </div>
+        )}
+      </div>
+
+      <Link className="text-link" to={`/students/${student.id}`}>
+        Ver perfil →
+      </Link>
+    </li>
+  );
+}
+
 export default function Students() {
   const { token } = useAuth();
   const [form, setForm] = useState(emptyFilters);
   const [filters, setFilters] = useState(emptyFilters);
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [view, setView] = useState('cards');
+  const requestRef = useRef(0);
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-
-    studentsApi
-      .list(filters, token)
-      .then((data) => {
-        if (active) setStudents(data);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [filters, token]);
+  useEffect(() => () => {
+    requestRef.current += 1;
+  }, []);
 
   const hasFilters = Boolean(
     filters.subjects.length || filters.interests.length || filters.academic_level,
@@ -154,16 +167,42 @@ export default function Students() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    setFilters({
-      subjects: form.subjects,
-      interests: form.interests,
+
+    const nextFilters = {
+      subjects: [...form.subjects],
+      interests: [...form.interests],
       academic_level: form.academic_level,
-    });
+    };
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+
+    setFilters(nextFilters);
+    setStudents([]);
+    setLoading(true);
+    setError('');
+    setHasSearched(true);
+
+    studentsApi
+      .list(nextFilters, token)
+      .then((data) => {
+        if (requestId === requestRef.current) setStudents(data);
+      })
+      .catch((err) => {
+        if (requestId === requestRef.current) setError(err.message);
+      })
+      .finally(() => {
+        if (requestId === requestRef.current) setLoading(false);
+      });
   }
 
   function clearFilters() {
+    requestRef.current += 1;
     setForm(emptyFilters());
     setFilters(emptyFilters());
+    setStudents([]);
+    setLoading(false);
+    setError('');
+    setHasSearched(false);
   }
 
   return (
@@ -174,6 +213,27 @@ export default function Students() {
           <h1>Encontrar estudantes</h1>
           <p>Descubra colegas com matérias e interesses acadêmicos em comum.</p>
         </div>
+      </div>
+
+      <div className="view-switcher" role="tablist" aria-label="Formato da lista de estudantes">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'cards'}
+          className={`view-tab${view === 'cards' ? ' active' : ''}`}
+          onClick={() => setView('cards')}
+        >
+          Cards
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'list'}
+          className={`view-tab${view === 'list' ? ' active' : ''}`}
+          onClick={() => setView('list')}
+        >
+          Lista
+        </button>
       </div>
 
       <form className="panel search-panel" onSubmit={handleSubmit}>
@@ -226,7 +286,13 @@ export default function Students() {
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
-      {loading ? (
+      {!hasSearched ? (
+        <div className="state-card">
+          <span className="state-icon" aria-hidden="true">🔍</span>
+          <h2>Busque estudantes</h2>
+          <p>Escolha matérias, interesses ou nível acadêmico e clique em Buscar estudantes.</p>
+        </div>
+      ) : loading ? (
         <div className="state-card">
           <div className="spinner" aria-hidden="true" />
           <p>Carregando estudantes...</p>
@@ -261,12 +327,18 @@ export default function Students() {
                 </button>
               )}
             </div>
-          ) : (
+          ) : view === 'cards' ? (
             <div className="students-grid">
               {students.map((student) => (
                 <StudentCard student={student} key={student.id} />
               ))}
             </div>
+          ) : (
+            <ul className="student-list">
+              {students.map((student) => (
+                <StudentRow student={student} key={student.id} />
+              ))}
+            </ul>
           )}
         </>
       )}

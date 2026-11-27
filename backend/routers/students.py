@@ -26,7 +26,6 @@ _COMMON_INTERESTS = """
 _STUDENT_SELECT = f"""
 SELECT
     u.id,
-    u.email,
     ap.name,
     ap.bio,
     ap.academic_level,

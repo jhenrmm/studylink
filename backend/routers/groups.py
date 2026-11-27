@@ -18,7 +18,6 @@ SELECT
     g.subject,
     g.creator_id,
     ap.name AS creator_name,
-    u.email AS creator_email,
     g.created_at,
     g.join_policy,
     (SELECT COUNT(*) FROM group_members AS gm WHERE gm.group_id = g.id) AS member_count,
@@ -48,7 +47,6 @@ SELECT
     jr.id,
     jr.group_id,
     jr.user_id,
-    u.email,
     ap.name,
     jr.status,
     jr.created_at,
@@ -263,7 +261,6 @@ def list_group_members(
             """
             SELECT
                 u.id,
-                u.email,
                 ap.name,
                 gm.role,
                 gm.joined_at
