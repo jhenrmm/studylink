@@ -38,7 +38,7 @@ export default function Login() {
         </div>
 
         <div className="alert alert-info">
-          Conta de demonstração: <strong>demo@studylink.com</strong> / <strong>123456</strong>
+          Use a conta que você criou no cadastro para entrar.
         </div>
 
         {error && <div className="alert alert-error" role="alert">{error}</div>}

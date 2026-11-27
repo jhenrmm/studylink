@@ -1,597 +1,172 @@
-// Dados simulados apenas em memória. Ao recarregar a página, tudo é resetado.
-const DEMO_EMAIL = 'demo@studylink.com';
-const DEMO_PASSWORD = '123456';
+const API_URL = (
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')
+).replace(/\/+$/, '');
 
-let nextUserId = 1;
-let nextGroupId = 1;
-let nextRequestId = 1;
-
-function makeUser(email, password, createdAt = new Date().toISOString()) {
-  return { id: nextUserId++, email, password, createdAt };
-}
-
-function makeGroup({
-  name,
-  description,
-  subject,
-  creatorEmail,
-  createdAt,
-  members,
-  joinPolicy = 'open',
-}) {
-  return {
-    id: nextGroupId++,
-    name,
-    description,
-    subject,
-    joinPolicy,
-    creatorEmail,
-    createdAt,
-    members,
-  };
-}
-
-function makeJoinRequest({
-  groupId,
-  email,
-  status = 'pending',
-  createdAt,
-  decidedAt = null,
-  decidedBy = null,
-}) {
-  return {
-    id: nextRequestId++,
-    groupId,
-    email,
-    status,
-    createdAt,
-    decidedAt,
-    decidedBy,
-  };
-}
-
-// O quarto grupo permite demonstrar também o fluxo de aprovação de solicitações.
-const seedGroups = [
-  makeGroup({
-    name: 'Matemática para o ENEM',
-    description:
-      'Grupo para resolver exercícios de matemática do ENEM toda semana. Compartilhamos listas, dicas e correções em conjunto.',
-    subject: 'Matemática',
-    creatorEmail: 'bruno@studylink.com',
-    createdAt: '2026-05-09T14:00:00.000Z',
-    members: [
-      { email: 'bruno@studylink.com', role: 'admin', joinedAt: '2026-05-09T14:00:00.000Z' },
-      { email: DEMO_EMAIL, role: 'member', joinedAt: '2026-05-10T09:00:00.000Z' },
-    ],
-  }),
-  makeGroup({
-    name: 'Programação em Python',
-    description:
-      'Encontros para praticar lógica de programação e construir pequenos projetos em Python. Iniciantes são bem-vindos!',
-    subject: 'Programação',
-    creatorEmail: 'carla@studylink.com',
-    createdAt: '2026-05-13T10:30:00.000Z',
-    joinPolicy: 'approval',
-    members: [
-      { email: 'carla@studylink.com', role: 'admin', joinedAt: '2026-05-13T10:30:00.000Z' },
-    ],
-  }),
-  makeGroup({
-    name: 'Estatística aplicada',
-    description:
-      'Leitura de artigos e discussão de exercícios de estatística com foco em ciência de dados.',
-    subject: 'Estatística',
-    creatorEmail: 'elisa@studylink.com',
-    createdAt: '2026-05-11T16:45:00.000Z',
-    members: [
-      { email: 'elisa@studylink.com', role: 'admin', joinedAt: '2026-05-11T16:45:00.000Z' },
-    ],
-  }),
-  makeGroup({
-    name: 'Algoritmos e estruturas de dados',
-    description:
-      'Estudo semanal de algoritmos, complexidade e estruturas de dados com exercícios e discussão em grupo.',
-    subject: 'Programação',
-    creatorEmail: DEMO_EMAIL,
-    createdAt: '2026-05-15T09:00:00.000Z',
-    joinPolicy: 'approval',
-    members: [
-      { email: DEMO_EMAIL, role: 'admin', joinedAt: '2026-05-15T09:00:00.000Z' },
-    ],
-  }),
-];
-
-const state = {
-  users: new Map([
-    [DEMO_EMAIL, makeUser(DEMO_EMAIL, DEMO_PASSWORD, '2026-01-12T10:00:00.000Z')],
-    ['bruno@studylink.com', makeUser('bruno@studylink.com', DEMO_PASSWORD, '2026-02-03T10:00:00.000Z')],
-    ['carla@studylink.com', makeUser('carla@studylink.com', DEMO_PASSWORD, '2026-02-18T10:00:00.000Z')],
-    ['diego@studylink.com', makeUser('diego@studylink.com', DEMO_PASSWORD, '2026-03-05T10:00:00.000Z')],
-    ['elisa@studylink.com', makeUser('elisa@studylink.com', DEMO_PASSWORD, '2026-03-21T10:00:00.000Z')],
-    ['felipe@studylink.com', makeUser('felipe@studylink.com', DEMO_PASSWORD, '2026-04-02T10:00:00.000Z')],
-  ]),
-  profiles: new Map([
-    [
-      DEMO_EMAIL,
-      {
-        name: 'Ana Oliveira',
-        bio: 'Estudante de Ciência da Computação. Gosto de estudar em grupo e projetos de programação.',
-        academic_level: 'Graduação',
-        subjects: ['Programação', 'Matemática', 'Banco de Dados'],
-        interests: ['Estudos em grupo', 'Pesquisa', 'Projetos'],
-        updated_at: '2026-05-10T14:00:00.000Z',
-      },
-    ],
-    [
-      'bruno@studylink.com',
-      {
-        name: 'Bruno Costa',
-        bio: 'Cursando o Ensino Médio e me preparando para o ENEM. Gosto de resolver exercícios com colegas.',
-        academic_level: 'Ensino Médio',
-        subjects: ['Matemática', 'Física'],
-        interests: ['Estudos em grupo', 'Concursos'],
-        updated_at: '2026-05-08T09:30:00.000Z',
-      },
-    ],
-    [
-      'carla@studylink.com',
-      {
-        name: 'Carla Mendes',
-        bio: 'Desenvolvedora em formação. Procuro pessoas para projetos e grupos de estudo de programação.',
-        academic_level: 'Graduação',
-        subjects: ['Programação', 'Banco de Dados', 'Matemática'],
-        interests: ['Projetos', 'Pesquisa', 'Hackathons'],
-        updated_at: '2026-05-12T18:20:00.000Z',
-      },
-    ],
-    [
-      'diego@studylink.com',
-      {
-        name: 'Diego Santos',
-        bio: 'Estudante de Ciências Naturais. Tenho interesse em pesquisa e leitura de artigos científicos.',
-        academic_level: 'Graduação',
-        subjects: ['Física', 'Química', 'Cálculo'],
-        interests: ['Pesquisa', 'Leitura', 'Laboratório'],
-        updated_at: '2026-05-06T11:10:00.000Z',
-      },
-    ],
-    [
-      'elisa@studylink.com',
-      {
-        name: 'Elisa Rocha',
-        bio: 'Pesquisadora em formação na área de dados. Gosto de colaborar em projetos e publicações.',
-        academic_level: 'Pós-graduação',
-        subjects: ['Estatística', 'Matemática', 'Ciência de Dados'],
-        interests: ['Pesquisa', 'Projetos', 'Publicações'],
-        updated_at: '2026-05-11T16:45:00.000Z',
-      },
-    ],
-  ]),
-  groups: seedGroups,
-  joinRequests: [
-    makeJoinRequest({
-      groupId: seedGroups[3].id,
-      email: 'bruno@studylink.com',
-      createdAt: '2026-05-16T13:20:00.000Z',
-    }),
-  ],
-  tokens: new Map(),
+const ERROR_MESSAGES = {
+  'Email already registered': 'Este e-mail já está cadastrado.',
+  'Incorrect email or password': 'E-mail ou senha incorretos.',
+  'Could not validate credentials': 'Sessão inválida. Entre novamente.',
+  'Not authenticated': 'Sessão inválida. Entre novamente.',
+  'Invalid token': 'Sessão inválida. Entre novamente.',
 };
 
-function normalizeEmail(email) {
-  return String(email).trim().toLowerCase();
-}
+function errorMessage(payload) {
+  const detail = payload?.detail;
 
-function normalizeKey(value) {
-  return String(value).trim().toLocaleLowerCase('pt-BR');
-}
-
-function createToken() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `token-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function getUserFromToken(token) {
-  const email = state.tokens.get(token);
-  if (!email) throw new Error('Sessão inválida. Entre novamente.');
-
-  const user = state.users.get(email);
-  if (!user) throw new Error('Sessão inválida. Entre novamente.');
-
-  return user;
-}
-
-function publicUser(user) {
-  return { email: user.email, created_at: user.createdAt };
-}
-
-function buildStudent(user, profile, subjectKeys = [], interestKeys = []) {
-  const subjects = profile?.subjects || [];
-  const interests = profile?.interests || [];
-  const commonSubjects = subjects.filter((item) => subjectKeys.includes(normalizeKey(item)));
-  const commonInterests = interests.filter((item) => interestKeys.includes(normalizeKey(item)));
-
-  return {
-    id: user.id,
-    email: user.email,
-    name: profile?.name || null,
-    bio: profile?.bio || null,
-    academic_level: profile?.academic_level || null,
-    subjects,
-    interests,
-    updated_at: profile?.updated_at || null,
-    common_subjects: commonSubjects,
-    common_interests: commonInterests,
-    match_count: commonSubjects.length + commonInterests.length,
-  };
-}
-
-function buildGroup(group, currentEmail) {
-  const creator = state.users.get(group.creatorEmail);
-  const profile = state.profiles.get(group.creatorEmail);
-  const membership = group.members.find((member) => member.email === currentEmail);
-
-  return {
-    id: group.id,
-    name: group.name,
-    description: group.description,
-    subject: group.subject,
-    creator_id: creator?.id ?? null,
-    creator_name: profile?.name || null,
-    creator_email: group.creatorEmail,
-    member_count: group.members.length,
-    is_member: Boolean(membership),
-    is_admin: membership?.role === 'admin',
-    join_policy: group.joinPolicy || 'open',
-    has_pending_request: state.joinRequests.some(
-      (request) =>
-        request.groupId === group.id &&
-        request.email === currentEmail &&
-        request.status === 'pending',
-    ),
-    created_at: group.createdAt,
-  };
-}
-
-function findGroup(groupId) {
-  const group = state.groups.find((item) => String(item.id) === String(groupId));
-  if (!group) throw new Error('Group not found');
-  return group;
-}
-
-function getMembership(group, email) {
-  return group.members.find((member) => member.email === email);
-}
-
-function requireAdmin(group, email) {
-  if (getMembership(group, email)?.role !== 'admin') {
-    throw new Error('Apenas administradores podem gerenciar solicitações.');
+  if (typeof detail === 'string') return ERROR_MESSAGES[detail] || detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || 'Dado inválido').join('; ');
   }
+  return 'Não foi possível completar a solicitação.';
 }
 
-function buildMember(member) {
-  const user = state.users.get(member.email);
-  const profile = state.profiles.get(member.email);
+async function apiFetch(path, { method = 'GET', token, body, params } = {}) {
+  if (!API_URL) {
+    throw new Error('Backend não configurado: defina VITE_API_URL no Vercel.');
+  }
 
-  return {
-    id: user?.id ?? null,
-    email: member.email,
-    name: profile?.name || null,
-    role: member.role,
-    joined_at: member.joinedAt,
-  };
-}
+  const headers = { Accept: 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
 
-function buildJoinRequest(request) {
-  const user = state.users.get(request.email);
-  const profile = state.profiles.get(request.email);
-  const decider = state.users.get(request.decidedBy);
+  let url = `${API_URL}${path}`;
+  if (params) {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null || value === '') continue;
+      if (Array.isArray(value)) {
+        value.forEach((item) => search.append(key, item));
+      } else {
+        search.append(key, String(value));
+      }
+    }
+    const query = search.toString();
+    if (query) url += `?${query}`;
+  }
 
-  return {
-    id: request.id,
-    group_id: request.groupId,
-    user_id: user?.id ?? null,
-    email: request.email,
-    name: profile?.name || null,
-    status: request.status,
-    created_at: request.createdAt,
-    decided_at: request.decidedAt,
-    decided_by: decider?.id ?? null,
-  };
-}
-
-function decideJoinRequest(groupId, requestId, email, decision) {
-  const group = findGroup(groupId);
-  requireAdmin(group, email);
-
-  const request = state.joinRequests.find(
-    (item) => item.id === Number(requestId) && item.groupId === group.id,
-  );
-  if (!request) throw new Error('Solicitação não encontrada.');
-  if (request.status !== 'pending') throw new Error('Esta solicitação já foi decidida.');
-
-  if (decision === 'approved' && !getMembership(group, request.email)) {
-    group.members.push({
-      email: request.email,
-      role: 'member',
-      joinedAt: new Date().toISOString(),
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
   }
-  request.status = decision;
-  request.decidedAt = new Date().toISOString();
-  request.decidedBy = email;
 
-  return buildGroup(group, email);
+  if (response.status === 204) return null;
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(errorMessage(payload));
+  return payload;
 }
 
 export const authApi = {
-  async register(email, password) {
-    const key = normalizeEmail(email);
-
-    if (state.users.has(key)) {
-      throw new Error('Este e-mail já está cadastrado.');
-    }
-
-    const user = makeUser(key, password);
-
-    state.users.set(key, user);
-    return publicUser(user);
+  register(email, password) {
+    return apiFetch('/register', { method: 'POST', body: { email, password } });
   },
 
-  async login(email, password) {
-    const key = normalizeEmail(email);
-    const user = state.users.get(key);
-
-    if (!user || user.password !== password) {
-      throw new Error('E-mail ou senha incorretos.');
-    }
-
-    const access_token = createToken();
-    state.tokens.set(access_token, key);
-
-    return { access_token, token_type: 'bearer' };
+  login(email, password) {
+    return apiFetch('/login', { method: 'POST', body: { email, password } });
   },
 
-  async logout(token) {
-    state.tokens.delete(token);
-    return { detail: 'Sessão encerrada.' };
+  logout(token) {
+    return apiFetch('/logout', { method: 'POST', token });
   },
 
-  async me(token) {
-    return publicUser(getUserFromToken(token));
+  me(token) {
+    return apiFetch('/me', { token });
   },
 };
 
 export const profileApi = {
-  async get(token) {
-    const user = getUserFromToken(token);
-    const profile = state.profiles.get(user.email);
-
-    if (!profile) throw new Error('Academic profile not found');
-
-    return { email: user.email, ...profile };
+  get(token) {
+    return apiFetch('/me/profile', { token });
   },
 
-  async save(profile, token) {
-    const user = getUserFromToken(token);
-
-    const saved = {
-      name: profile.name || null,
-      bio: profile.bio || null,
-      academic_level: profile.academic_level || null,
-      subjects: profile.subjects || [],
-      interests: profile.interests || [],
-      updated_at: new Date().toISOString(),
-    };
-
-    state.profiles.set(user.email, saved);
-    return { email: user.email, ...saved };
+  save(profile, token) {
+    return apiFetch('/me/profile', {
+      method: 'PUT',
+      token,
+      body: {
+        name: profile.name || null,
+        bio: profile.bio || null,
+        academic_level: profile.academic_level || null,
+        subjects: profile.subjects || [],
+        interests: profile.interests || [],
+      },
+    });
   },
 };
 
-// Espelha GET /students e GET /students/{id} do backend FastAPI.
 export const studentsApi = {
-  async list({ subjects = [], interests = [], academic_level = '' } = {}, token) {
-    const currentUser = getUserFromToken(token);
-    const subjectKeys = subjects.map(normalizeKey).filter(Boolean);
-    const interestKeys = interests.map(normalizeKey).filter(Boolean);
-    const levelKey = normalizeKey(academic_level);
-
-    const students = [];
-
-    for (const user of state.users.values()) {
-      if (user.email === currentUser.email) continue;
-
-      const profile = state.profiles.get(user.email);
-      const student = buildStudent(user, profile, subjectKeys, interestKeys);
-
-      if (subjectKeys.length && student.common_subjects.length === 0) continue;
-      if (interestKeys.length && student.common_interests.length === 0) continue;
-      if (levelKey && normalizeKey(profile?.academic_level || '') !== levelKey) continue;
-
-      students.push(student);
-    }
-
-    students.sort((a, b) => {
-      if (b.match_count !== a.match_count) return b.match_count - a.match_count;
-
-      const aUpdated = a.updated_at ? Date.parse(a.updated_at) : 0;
-      const bUpdated = b.updated_at ? Date.parse(b.updated_at) : 0;
-      if (bUpdated !== aUpdated) return bUpdated - aUpdated;
-
-      return a.email.localeCompare(b.email);
+  list({ subjects = [], interests = [], academic_level = '' } = {}, token) {
+    return apiFetch('/students', {
+      token,
+      params: { subjects, interests, academic_level, limit: 100 },
     });
-
-    return students;
   },
 
-  async get(studentId, token) {
-    getUserFromToken(token);
-
-    const user = Array.from(state.users.values()).find(
-      (item) => String(item.id) === String(studentId),
-    );
-
-    if (!user) throw new Error('Student not found');
-
-    return buildStudent(user, state.profiles.get(user.email));
+  get(studentId, token) {
+    return apiFetch(`/students/${encodeURIComponent(studentId)}`, { token });
   },
 };
 
-// Espelha as rotas de grupos do backend FastAPI, incluindo entrada em grupos.
 export const groupsApi = {
-  async create({ name, description, subject, joinPolicy = 'open' }, token) {
-    const user = getUserFromToken(token);
-
-    const cleaned = {
-      name: String(name || '').trim(),
-      description: String(description || '').trim(),
-      subject: String(subject || '').trim(),
-    };
-
-    if (!cleaned.name || !cleaned.description || !cleaned.subject) {
-      throw new Error('Informe nome, descrição e matéria do grupo.');
-    }
-    if (cleaned.name.length > 120) {
-      throw new Error('O nome do grupo deve ter no máximo 120 caracteres.');
-    }
-    if (cleaned.description.length > 1000) {
-      throw new Error('A descrição do grupo deve ter no máximo 1000 caracteres.');
-    }
-    if (cleaned.subject.length > 100) {
-      throw new Error('A matéria do grupo deve ter no máximo 100 caracteres.');
-    }
-
-    const now = new Date().toISOString();
-    const group = makeGroup({
-      ...cleaned,
-      joinPolicy: joinPolicy === 'approval' ? 'approval' : 'open',
-      creatorEmail: user.email,
-      createdAt: now,
-      members: [{ email: user.email, role: 'admin', joinedAt: now }],
+  create({ name, description, subject, joinPolicy = 'open' }, token) {
+    return apiFetch('/groups', {
+      method: 'POST',
+      token,
+      body: { name, description, subject, join_policy: joinPolicy },
     });
-
-    state.groups.push(group);
-    return buildGroup(group, user.email);
   },
 
-  async list({ subject = '' } = {}, token) {
-    const currentUser = getUserFromToken(token);
-    const subjectKey = normalizeKey(subject);
-
-    const groups = state.groups
-      .filter((group) => !subjectKey || normalizeKey(group.subject) === subjectKey)
-      .sort((a, b) => {
-        const diff = Date.parse(b.createdAt) - Date.parse(a.createdAt);
-        return diff !== 0 ? diff : b.id - a.id;
-      });
-
-    return groups.map((group) => buildGroup(group, currentUser.email));
+  list({ subject = '' } = {}, token) {
+    return apiFetch('/groups', { token, params: { subject, limit: 100 } });
   },
 
-  async mine({ subject = '' } = {}, token) {
-    const currentUser = getUserFromToken(token);
-    const subjectKey = normalizeKey(subject);
-
-    const groups = state.groups
-      .filter((group) => getMembership(group, currentUser.email))
-      .filter((group) => !subjectKey || normalizeKey(group.subject) === subjectKey)
-      .sort((a, b) => {
-        const diff = Date.parse(b.createdAt) - Date.parse(a.createdAt);
-        return diff !== 0 ? diff : b.id - a.id;
-      });
-
-    return groups.map((group) => buildGroup(group, currentUser.email));
+  mine({ subject = '' } = {}, token) {
+    return apiFetch('/me/groups', { token, params: { subject, limit: 100 } });
   },
 
-  async get(groupId, token) {
-    const currentUser = getUserFromToken(token);
-    return buildGroup(findGroup(groupId), currentUser.email);
+  get(groupId, token) {
+    return apiFetch(`/groups/${encodeURIComponent(groupId)}`, { token });
   },
 
-  async members(groupId, token) {
-    getUserFromToken(token);
-    const group = findGroup(groupId);
-
-    return [...group.members]
-      .sort((a, b) => {
-        if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
-        const diff = Date.parse(a.joinedAt) - Date.parse(b.joinedAt);
-        return diff !== 0 ? diff : a.email.localeCompare(b.email);
-      })
-      .map(buildMember);
+  members(groupId, token) {
+    return apiFetch(`/groups/${encodeURIComponent(groupId)}/members`, { token });
   },
 
-  async join(groupId, token) {
-    const user = getUserFromToken(token);
-    const group = findGroup(groupId);
-
-    if (getMembership(group, user.email)) {
-      throw new Error('Você já participa deste grupo.');
-    }
-    if (group.joinPolicy !== 'open') {
-      throw new Error('Este grupo exige aprovação. Solicite participação.');
-    }
-
-    group.members.push({
-      email: user.email,
-      role: 'member',
-      joinedAt: new Date().toISOString(),
+  join(groupId, token) {
+    return apiFetch(`/groups/${encodeURIComponent(groupId)}/join`, {
+      method: 'POST',
+      token,
     });
-    return buildGroup(group, user.email);
   },
 
-  async request(groupId, token) {
-    const user = getUserFromToken(token);
-    const group = findGroup(groupId);
+  request(groupId, token) {
+    return apiFetch(`/groups/${encodeURIComponent(groupId)}/requests`, {
+      method: 'POST',
+      token,
+    });
+  },
 
-    if (getMembership(group, user.email)) {
-      throw new Error('Você já participa deste grupo.');
-    }
-    if (group.joinPolicy !== 'approval') {
-      throw new Error('Este grupo permite entrada direta.');
-    }
-    const alreadyRequested = state.joinRequests.some(
-      (request) =>
-        request.groupId === group.id &&
-        request.email === user.email &&
-        request.status === 'pending',
+  requests(groupId, token) {
+    return apiFetch(`/groups/${encodeURIComponent(groupId)}/requests`, { token });
+  },
+
+  approve(groupId, requestId, token) {
+    return apiFetch(
+      `/groups/${encodeURIComponent(groupId)}/requests/${encodeURIComponent(requestId)}/approve`,
+      { method: 'POST', token },
     );
-    if (alreadyRequested) {
-      throw new Error('Você já enviou uma solicitação para este grupo.');
-    }
-
-    const request = makeJoinRequest({
-      groupId: group.id,
-      email: user.email,
-      createdAt: new Date().toISOString(),
-    });
-    state.joinRequests.push(request);
-    return buildJoinRequest(request);
   },
 
-  async requests(groupId, token) {
-    const user = getUserFromToken(token);
-    const group = findGroup(groupId);
-    requireAdmin(group, user.email);
-
-    return state.joinRequests
-      .filter((request) => request.groupId === group.id)
-      .sort((a, b) => {
-        if (a.status !== b.status) return a.status === 'pending' ? -1 : 1;
-        const diff = Date.parse(a.createdAt) - Date.parse(b.createdAt);
-        return diff !== 0 ? diff : a.id - b.id;
-      })
-      .map(buildJoinRequest);
-  },
-
-  async approve(groupId, requestId, token) {
-    const user = getUserFromToken(token);
-    return decideJoinRequest(groupId, requestId, user.email, 'approved');
-  },
-
-  async reject(groupId, requestId, token) {
-    const user = getUserFromToken(token);
-    return decideJoinRequest(groupId, requestId, user.email, 'rejected');
+  reject(groupId, requestId, token) {
+    return apiFetch(
+      `/groups/${encodeURIComponent(groupId)}/requests/${encodeURIComponent(requestId)}/reject`,
+      { method: 'POST', token },
+    );
   },
 };
