@@ -1,8 +1,8 @@
 """User profile routes."""
 from fastapi import APIRouter, Depends
 
-from ..dependencies import get_current_user
-from ..models import UserOut
+from backend.dependencies import get_current_user
+from backend.models import UserOut
 
 router = APIRouter(tags=["users"])
 

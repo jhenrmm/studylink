@@ -3,8 +3,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from psycopg2.extras import RealDictCursor
 
-from .database import db_connection
-from .security import decode_token
+from backend.database import db_connection
+from backend.security import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 

@@ -3,9 +3,9 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from ..database import get_db
-from ..dependencies import get_current_user
-from ..models import StudentOut, clean_terms
+from backend.database import get_db
+from backend.dependencies import get_current_user
+from backend.models import StudentOut, clean_terms
 
 router = APIRouter(tags=["students"])
 

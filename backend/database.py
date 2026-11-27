@@ -6,7 +6,7 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 
-from .config import DATABASE_URL
+from backend.config import DATABASE_URL
 
 DATABASE_NAME = "studylink"
 ADMIN_DATABASE = "postgres"

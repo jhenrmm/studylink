@@ -1,10 +1,10 @@
 """Authentication routes: register, login, logout."""
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ..database import get_db
-from ..dependencies import oauth2_scheme, unauthorized_exception
-from ..models import Token, UserLogin, UserOut, UserRegister
-from ..security import create_access_token, decode_token, hash_password, verify_password
+from backend.database import get_db
+from backend.dependencies import oauth2_scheme, unauthorized_exception
+from backend.models import Token, UserLogin, UserOut, UserRegister
+from backend.security import create_access_token, decode_token, hash_password, verify_password
 
 router = APIRouter(tags=["auth"])
 

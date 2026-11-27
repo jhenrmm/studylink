@@ -7,7 +7,7 @@ from typing import Optional
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
 
-from .config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
+from backend.config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 
 _PBKDF2_ITERATIONS = 100_000
 _SALT_BYTES = 16

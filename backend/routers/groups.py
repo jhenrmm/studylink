@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from psycopg2.errors import UniqueViolation
 
-from ..database import get_db
-from ..dependencies import get_current_user
-from ..models import GroupCreate, GroupMemberOut, GroupOut, JoinRequestOut
+from backend.database import get_db
+from backend.dependencies import get_current_user
+from backend.models import GroupCreate, GroupMemberOut, GroupOut, JoinRequestOut
 
 router = APIRouter(tags=["groups"])
 
