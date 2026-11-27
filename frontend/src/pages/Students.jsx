@@ -111,6 +111,37 @@ function StudentCard({ student }) {
   );
 }
 
+function StudentRow({ student }) {
+  const subjects = student.subjects?.slice(0, 3).join(' · ');
+
+  return (
+    <li className="student-row">
+      <span className="student-avatar" aria-hidden="true">
+        {getInitials(student.name)}
+      </span>
+
+      <div className="student-row-identity">
+        <strong>{student.name || 'Estudante sem nome'}</strong>
+        {(student.academic_level || subjects || student.match_count > 0) && (
+          <div className="student-row-meta">
+            {student.academic_level && (
+              <span className="level-badge level-badge-sm">{student.academic_level}</span>
+            )}
+            {student.match_count > 0 && (
+              <span className="match-badge">{student.match_count} em comum</span>
+            )}
+            {subjects && <span>{subjects}</span>}
+          </div>
+        )}
+      </div>
+
+      <Link className="text-link" to={`/students/${student.id}`}>
+        Ver perfil →
+      </Link>
+    </li>
+  );
+}
+
 export default function Students() {
   const { token } = useAuth();
   const [form, setForm] = useState(emptyFilters);
@@ -119,6 +150,7 @@ export default function Students() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [view, setView] = useState('cards');
   const requestRef = useRef(0);
 
   useEffect(() => () => {
@@ -181,6 +213,27 @@ export default function Students() {
           <h1>Encontrar estudantes</h1>
           <p>Descubra colegas com matérias e interesses acadêmicos em comum.</p>
         </div>
+      </div>
+
+      <div className="view-switcher" role="tablist" aria-label="Formato da lista de estudantes">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'cards'}
+          className={`view-tab${view === 'cards' ? ' active' : ''}`}
+          onClick={() => setView('cards')}
+        >
+          Cards
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'list'}
+          className={`view-tab${view === 'list' ? ' active' : ''}`}
+          onClick={() => setView('list')}
+        >
+          Lista
+        </button>
       </div>
 
       <form className="panel search-panel" onSubmit={handleSubmit}>
@@ -274,12 +327,18 @@ export default function Students() {
                 </button>
               )}
             </div>
-          ) : (
+          ) : view === 'cards' ? (
             <div className="students-grid">
               {students.map((student) => (
                 <StudentCard student={student} key={student.id} />
               ))}
             </div>
+          ) : (
+            <ul className="student-list">
+              {students.map((student) => (
+                <StudentRow student={student} key={student.id} />
+              ))}
+            </ul>
           )}
         </>
       )}
