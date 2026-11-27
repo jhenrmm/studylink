@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   INTEREST_SUGGESTIONS,
@@ -119,30 +119,14 @@ export default function Students() {
   const [form, setForm] = useState(emptyFilters);
   const [filters, setFilters] = useState(emptyFilters);
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const requestRef = useRef(0);
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-
-    studentsApi
-      .list(filters, token)
-      .then((data) => {
-        if (active) setStudents(data);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [filters, token]);
+  useEffect(() => () => {
+    requestRef.current += 1;
+  }, []);
 
   const hasFilters = Boolean(
     filters.subjects.length || filters.interests.length || filters.academic_level,
@@ -154,16 +138,42 @@ export default function Students() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    setFilters({
-      subjects: form.subjects,
-      interests: form.interests,
+
+    const nextFilters = {
+      subjects: [...form.subjects],
+      interests: [...form.interests],
       academic_level: form.academic_level,
-    });
+    };
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+
+    setFilters(nextFilters);
+    setStudents([]);
+    setLoading(true);
+    setError('');
+    setHasSearched(true);
+
+    studentsApi
+      .list(nextFilters, token)
+      .then((data) => {
+        if (requestId === requestRef.current) setStudents(data);
+      })
+      .catch((err) => {
+        if (requestId === requestRef.current) setError(err.message);
+      })
+      .finally(() => {
+        if (requestId === requestRef.current) setLoading(false);
+      });
   }
 
   function clearFilters() {
+    requestRef.current += 1;
     setForm(emptyFilters());
     setFilters(emptyFilters());
+    setStudents([]);
+    setLoading(false);
+    setError('');
+    setHasSearched(false);
   }
 
   return (
@@ -226,7 +236,13 @@ export default function Students() {
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
-      {loading ? (
+      {!hasSearched ? (
+        <div className="state-card">
+          <span className="state-icon" aria-hidden="true">🔍</span>
+          <h2>Busque estudantes</h2>
+          <p>Escolha matérias, interesses ou nível acadêmico e clique em Buscar estudantes.</p>
+        </div>
+      ) : loading ? (
         <div className="state-card">
           <div className="spinner" aria-hidden="true" />
           <p>Carregando estudantes...</p>
