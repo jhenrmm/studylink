@@ -3,8 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { studentsApi } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 
-function getInitials(name, email) {
-  const source = (name || email || 'SL').trim();
+function getInitials(name) {
+  const source = (name || 'SL').trim();
   const parts = source.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
@@ -83,11 +83,10 @@ export default function StudentProfile() {
           <section className="panel profile-card">
             <div className="profile-identity">
               <div className="profile-avatar" aria-hidden="true">
-                {getInitials(student.name, student.email)}
+                {getInitials(student.name)}
               </div>
               <div>
                 <h2>{student.name || 'Estudante sem nome'}</h2>
-                <p>{student.email}</p>
               </div>
             </div>
 
@@ -130,13 +129,7 @@ export default function StudentProfile() {
           </section>
 
           <aside className="panel profile-side">
-            <h3>Contato</h3>
-            <p className="muted">
-              Entre em contato para combinar um grupo de estudos.
-            </p>
-            <a className="button button-primary button-full" href={`mailto:${student.email}`}>
-              Enviar e-mail
-            </a>
+            <h3>Detalhes</h3>
             {student.updated_at && (
               <div className="side-stat">
                 <span>Última atualização</span>

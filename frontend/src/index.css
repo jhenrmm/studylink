@@ -1030,17 +1030,6 @@ p {
   overflow-wrap: anywhere;
 }
 
-.student-email {
-  display: block;
-  color: var(--muted);
-  font-size: 0.84rem;
-  overflow-wrap: anywhere;
-}
-
-.student-email:hover {
-  color: var(--primary);
-}
-
 .level-badge-sm {
   margin-top: 8px;
   padding: 4px 9px;

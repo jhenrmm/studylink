@@ -13,8 +13,8 @@ function emptyFilters() {
   return { subjects: [], interests: [], academic_level: '' };
 }
 
-function getInitials(name, email) {
-  const source = (name || email || 'SL').trim();
+function getInitials(name) {
+  const source = (name || 'SL').trim();
   const parts = source.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
@@ -68,14 +68,11 @@ function StudentCard({ student }) {
     <article className="student-card">
       <div className="student-card-header">
         <div className="student-avatar" aria-hidden="true">
-          {getInitials(student.name, student.email)}
+          {getInitials(student.name)}
         </div>
 
         <div className="student-identity">
           <h2>{student.name || 'Estudante sem nome'}</h2>
-          <a className="student-email" href={`mailto:${student.email}`}>
-            {student.email}
-          </a>
           {student.academic_level && (
             <span className="level-badge level-badge-sm">{student.academic_level}</span>
           )}

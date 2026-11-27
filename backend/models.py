@@ -129,7 +129,6 @@ class GroupOut(BaseModel):
     subject: str
     creator_id: int
     creator_name: Optional[str] = None
-    creator_email: str
     member_count: int = 0
     is_member: bool = False
     is_admin: bool = False
@@ -142,7 +141,6 @@ class GroupMemberOut(BaseModel):
     """A student registered as a member of a study group."""
 
     id: int
-    email: str
     name: Optional[str] = None
     role: str
     joined_at: datetime
@@ -154,7 +152,6 @@ class JoinRequestOut(BaseModel):
     id: int
     group_id: int
     user_id: int
-    email: str
     name: Optional[str] = None
     status: str
     created_at: datetime
@@ -166,7 +163,6 @@ class StudentOut(BaseModel):
     """Academic data of a student that can be seen by other students."""
 
     id: int
-    email: str
     name: Optional[str] = None
     bio: Optional[str] = None
     academic_level: Optional[str] = None
